@@ -1,0 +1,75 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要发布的 tag（例如 v0.2.0）"
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Upgrade npm (trusted publishing 需要 >= 11.5.1)
+        run: npm install -g npm@latest
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+            git checkout "refs/tags/${TAG}"
+          fi
+          echo "name=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify package.json version matches tag
+        run: |
+          PKG="$(node -p "require('./package.json').version")"
+          TAG="${{ steps.tag.outputs.version }}"
+          if [ "$PKG" != "$TAG" ]; then
+            echo "::error::package.json 版本 ($PKG) 与 tag ($TAG) 不一致"
+            exit 1
+          fi
+          echo "version ok: $PKG"
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
+
+      - name: Check published version
+        run: |
+          sleep 5
+          npm view "opencode-effort-discovery@${{ steps.tag.outputs.version }}" version
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.tag.outputs.name }}" \
+            --title "${{ steps.tag.outputs.name }}" \
+            --generate-notes \
+            --verify-tag
