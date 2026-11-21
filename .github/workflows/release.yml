@@ -73,6 +73,7 @@ jobs:
         run: npm publish --provenance --access public
 
       - name: Check published version
+        continue-on-error: true
         run: |
           version="${{ steps.tag.outputs.version }}"
           for attempt in $(seq 1 20); do
@@ -83,8 +84,7 @@ jobs:
             echo "attempt ${attempt}: not visible yet, waiting 15s"
             sleep 15
           done
-          echo "::error::${version} 在 npm 上仍不可见"
-          exit 1
+          echo "::warning::${version} 在 npm 上仍不可见（registry 传播延迟），但 publish 步骤已成功，继续创建 Release"
 
       - name: Create GitHub Release
         env:
