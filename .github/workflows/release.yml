@@ -55,7 +55,19 @@ jobs:
           fi
           echo "version ok: $PKG"
 
+      - name: Check if version already exists on npm
+        id: exists
+        run: |
+          if npm view "opencode-effort-discovery@${{ steps.tag.outputs.version }}" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::${{ steps.tag.outputs.version }} 已在 npm 上，跳过发布，只创建 Release"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to npm
+        id: publish
+        if: steps.exists.outputs.published != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
