@@ -74,8 +74,17 @@ jobs:
 
       - name: Check published version
         run: |
-          sleep 5
-          npm view "opencode-effort-discovery@${{ steps.tag.outputs.version }}" version
+          version="${{ steps.tag.outputs.version }}"
+          for attempt in $(seq 1 20); do
+            if npm view "opencode-effort-discovery@${version}" version >/dev/null 2>&1; then
+              echo "registry ok: ${version}"
+              exit 0
+            fi
+            echo "attempt ${attempt}: not visible yet, waiting 15s"
+            sleep 15
+          done
+          echo "::error::${version} 在 npm 上仍不可见"
+          exit 1
 
       - name: Create GitHub Release
         env:
