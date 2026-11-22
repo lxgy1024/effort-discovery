@@ -34,6 +34,7 @@ agy plugin list --json
 | `hooks.json` | `SessionStart` 注入缓存结果；`PreInvocation` 提醒不支持的档位 |
 | `skills/effort-probe/SKILL.md` | `/effort-probe` 技能：跑探测并汇报 |
 | `scripts/probe.mjs` | 探测网关（OpenAI 兼容），可选 `--agy` 交叉验证 |
+| `scripts/emit-custom-models.mjs` | 把探测结果生成 agy 的 `customModels` 配置片段（`--write` 才写 settings.json） |
 | `scripts/session-note.mjs` | 只读缓存，`injectSteps.systemMessage` |
 | `scripts/effort-guard.mjs` | 提示用户提到的档位不被网关支持（只提醒，不终止） |
 | `rules/AGENTS.md` | 给 agent 的固定规则 |
@@ -45,6 +46,29 @@ node packages\antigravity\scripts\probe.mjs --agy --json
 ```
 
 provider 来自共享配置 `~/.config/effort-discovery.json`（默认第一个 `api: "openai"` 的 provider，可用 `--provider` 指定），结果缓存到 `~/.cache/effort-discovery/antigravity.json`。
+
+## 在非 Gemini 网关上使用模型：`emit-custom-models`
+
+agy 内置目录主要是 Gemini 系列。要让它用上你的 OpenAI 兼容网关模型，需要 `customModelsConfig`（仅当 `modelProvider: "gemini"` + `GEMINI_API_KEY` 时生效）：
+
+```powershell
+node "$p\scripts\emit-custom-models.mjs"            # 只输出 JSON 片段（dry-run）
+node "$p\scripts\emit-custom-models.mjs" --write    # 备份并合并进 ~/.gemini/antigravity-cli/settings.json
+```
+
+生成器按 `probe.mjs --agy` 的结果，为每个模型 × 每个可用档位生成一条条目：
+
+```json
+"ds-flash-high": {
+  "modelName": "gemini-api://https://gw.example/v1/models/deepseek-v4.1-flash",
+  "label": "deepseek-v4.1-flash (High)",
+  "thinkingLevel": "high"
+}
+```
+
+**硬限制**：`thinkingLevel` 只接受 `low|medium|high`；`max`/`xhigh` 会被跳过并警告。一个条目固定一个档位，多档位会生成多条不同 label 的条目（agy 是否接受相同 `modelName` 的多条目未在官方文档中确认，建议先 `--write` 后观察 `/model`）。
+
+写入前会备份 `settings.json.bak-<时间戳>`；生成器不会自动改 `modelProvider`。
 
 ## 注意
 

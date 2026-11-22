@@ -1,6 +1,6 @@
 {
   "name": "@tscgoods/antigravity-effort-discovery",
-  "version": "0.4.3",
+  "version": "0.4.5",
   "description": "Antigravity CLI plugin: probe which reasoning-effort levels your gateway accepts, inject the result into sessions, and optionally generate customModels entries.",
   "type": "module",
   "license": "MIT",

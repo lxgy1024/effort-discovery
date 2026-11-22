@@ -72,11 +72,15 @@ if (models.length === 0) {
   process.exit(2)
 }
 
+const previousCache = readJson(cachePath())
 const result = {
   at: Date.now(),
   provider: providerID,
   baseURL: entry.baseURL ?? entry.url,
-  models: {},
+  models:
+    previousCache?.models && typeof previousCache.models === "object"
+      ? { ...previousCache.models }
+      : {},
 }
 
 for (const model of models) {

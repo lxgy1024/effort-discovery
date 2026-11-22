@@ -27,3 +27,4 @@ node "${PLUGIN_ROOT}/scripts/probe.mjs" --agy --json
 - `no-validation` 表示网关接受任意值、无法确定真实支持范围——直说，不要猜。
 - 探测会真实发请求（每个模型最多 4 次，`max_tokens: 1`），只在自有网关上跑。
 - 不要把探测结果写进 agy 的 `settings.json`；`customModels` 生成属于单独的高级操作，需要用户明确同意。
+- 用户想把网关模型加进 agy 时，运行 `node "${PLUGIN_ROOT}/scripts/emit-custom-models.mjs"` 先看片段，确认后再 `--write`；明确说明 `thinkingLevel` 只能是 low/medium/high。
