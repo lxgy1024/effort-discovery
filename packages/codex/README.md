@@ -36,6 +36,19 @@ node scripts/sync-catalog.mjs --write
 
 插件还提供 `/efforts` 命令和 `effort-probe` 技能，让 agent 代跑这两步。
 
+## 哪个证据可信
+
+Codex 走的是 `/v1/responses`，因此**网关原生 catalog（`--provider` 里 `/models` 返回的 `supported_reasoning_levels`）才是 Codex 的权威来源**，`probe.mjs` 默认优先用它（`source: native-catalog`，零成本）。
+
+`--no-native` 走的是 `/v1/chat/completions` 的非法参数错误回显，属于**诊断用**。实测同一模型两者会矛盾：
+
+```
+native catalog        : low, medium, high, xhigh
+chat 错误回显         : none, low, high, max
+```
+
+两条路径的 wire 协议不同，不要拿 `--no-native` 的结果去 `sync-catalog --write` 覆盖 Codex catalog。运行 `probe.mjs` 不带 `--no-native` 即可恢复原生结果。
+
 ## 更省事的替代
 
 如果你的网关自己就返回 Codex 原生 catalog（`/models` 里有 `supported_reasoning_levels`），可以完全不装插件：
