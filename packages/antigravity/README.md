@@ -49,7 +49,20 @@ provider 来自共享配置 `~/.config/effort-discovery.json`（默认第一个 
 
 ## 在非 Gemini 网关上使用模型：`emit-custom-models`（实验结果：未生效，⚠️）
 
-> **实测结论（agy 1.5.14）**：以下写法在账号登录和 Gemini API key 两种模式下都试过，还额外试了 `--settings` 内联、4 种 URL scheme（`gemini-api://` / `blade:` / `evergreen:` / `beyond-api://`）和多种键名——`customModelsConfig` 里的条目**始终没有出现在 `agy models` / `/model` 里**。二进制里确实有这个 proto 字段，但这个版本没有从我们尝试的配置入口读取它。因此**不要依赖下面的生成器**，它目前只能作为"生成的片段长什么样"的参考。插件的核心能力（探测 + 报告档位）不受影响。
+> **实测结论（agy 1.5.14）**：以下写法在账号登录和 Gemini API key 两种模式下都试过，还额外试了 `--settings` 内联、4 种 URL scheme（`gemini-api://` / `blade:` / `evergreen:` / `beyond-api://`）和多种键名（`customModelsConfig` / `custom_models_config` / `customModels`）——`customModelsConfig` 里的条目**始终没有出现在 `agy models` / `/model` 里**。二进制里确实有 `customModelsConfig` proto 字段，但这个版本没有从我们尝试的任何配置入口读取它。因此**不要依赖下面的生成器**，它目前只能作为"生成的片段长什么样"的参考。
+
+实测中写入的 10 条 `customModels` 已经从 `~/.gemini/antigravity-cli/settings.json` 清理干净（保留了写前的 `.bak`），用户当前模型选择未变。
+
+**插件真正能做且已验证的部分**：
+
+| 能力 | 状态 |
+|---|---|
+| `SessionStart` 注入内置模型的权威档位（如 Gemini 3.8 Flash → low/medium/high） | ✅ |
+| `/effort-probe` 技能：并排展示网关实测与 agy 自报档位 | ✅ |
+| `PreInvocation` 提醒不要使用不支持的档位 | ✅ |
+| 把网关模型加进 agy 的 `/model` 菜单 | ❌ agy 1.5.14 限制 |
+
+换句话说：agy 自带的模型（Gemini / Claude / GPT-OSS）的档位信息插件能正确报告；但 agy 的 `--effort` 枚举和模型列表都是内置目录驱动的，插件改不了，网关模型也塞不进去。
 
 agy 内置目录主要是 Gemini 系列。理论上要用你的 OpenAI 兼容网关模型，需要 `customModelsConfig`（仅当 `modelProvider: "gemini"` + API key 时生效）：
 
