@@ -47,9 +47,11 @@ node packages\antigravity\scripts\probe.mjs --agy --json
 
 provider 来自共享配置 `~/.config/effort-discovery.json`（默认第一个 `api: "openai"` 的 provider，可用 `--provider` 指定），结果缓存到 `~/.cache/effort-discovery/antigravity.json`。
 
-## 在非 Gemini 网关上使用模型：`emit-custom-models`
+## 在非 Gemini 网关上使用模型：`emit-custom-models`（实验结果：未生效，⚠️）
 
-agy 内置目录主要是 Gemini 系列。要让它用上你的 OpenAI 兼容网关模型，需要 `customModelsConfig`（仅当 `modelProvider: "gemini"` + `GEMINI_API_KEY` 时生效）：
+> **实测结论（agy 1.5.14）**：以下写法在账号登录和 Gemini API key 两种模式下都试过，还额外试了 `--settings` 内联、4 种 URL scheme（`gemini-api://` / `blade:` / `evergreen:` / `beyond-api://`）和多种键名——`customModelsConfig` 里的条目**始终没有出现在 `agy models` / `/model` 里**。二进制里确实有这个 proto 字段，但这个版本没有从我们尝试的配置入口读取它。因此**不要依赖下面的生成器**，它目前只能作为"生成的片段长什么样"的参考。插件的核心能力（探测 + 报告档位）不受影响。
+
+agy 内置目录主要是 Gemini 系列。理论上要用你的 OpenAI 兼容网关模型，需要 `customModelsConfig`（仅当 `modelProvider: "gemini"` + API key 时生效）：
 
 ```powershell
 node "$p\scripts\emit-custom-models.mjs"            # 只输出 JSON 片段（dry-run）
