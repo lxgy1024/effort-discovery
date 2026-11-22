@@ -99,8 +99,10 @@ export function parseLevels(text: string): string[] | null {
       .map((item) => item.trim().replace(/^[`'"\s]+|[`'"\s.]+$/g, "").toLowerCase())
       .filter((item) => /^[a-z0-9_-]+$/.test(item))
 
-  // "valid levels: none, low, high, max"
-  const valid = /valid levels?:\s*([A-Za-z0-9_`'",\-\s]+)/i.exec(text)
+  // 只匹配逗号分隔的档位名，避免把 JSON 里的 "type":"invalid_request_error" 吞进来
+  const list = "[a-z0-9_-]+(?:\\s*,\\s*[a-z0-9_-]+)*"
+
+  const valid = new RegExp(`valid levels?:\\s*(${list})`, "i").exec(text)
   if (valid) {
     const levels = clean(valid[1])
     if (levels.length > 0) return levels
@@ -116,10 +118,10 @@ export function parseLevels(text: string): string[] | null {
   }
 
   // "supported levels are low|medium|high|max"
-  const supported =
-    /(?:supported|allowed|valid)\s+(?:levels|values|efforts)[^:\n]*[:-]\s*([A-Za-z0-9_`'",\-\s]+)/i.exec(
-      text,
-    )
+  const supported = new RegExp(
+    `(?:supported|allowed|valid)\\s+(?:levels|values|efforts)[^:\\n]*[:-]\\s*(${list})`,
+    "i",
+  ).exec(text)
   if (supported) {
     const levels = clean(supported[1])
     if (levels.length > 0) return levels

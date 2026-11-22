@@ -35,18 +35,24 @@ npm 的 trusted publisher 是**按包**配置的，以下每个包都要在 npmj
 
 ## 发版
 
-```powershell
-# 1. 同步所有包的版本（lockstep）
-npm version patch --no-git-tag-version -w packages/core -w packages/opencode -w packages/claude-code -w packages/codex -w packages/dsh -w packages/antigravity
+CI 只发布 `package.json` 版本**等于 tag 去掉 `v`** 的包；其它包自动跳过。因此各包可以独立演进版本，不要求 lockstep。当前 npm latest：
 
-# 2. 提交并推 tag
-git commit -am "chore: release 0.3.1"
-git push origin main
-git tag v0.3.1
-git push origin v0.3.1
+```
+core 0.4.0 | opencode 0.3.1 | claude-code 0.4.4 | codex 0.4.7 | dsh 0.3.2 | antigravity 0.4.6
 ```
 
-CI 跑完后 npm 和 GitHub Releases 里会出现同一个版本。
+只升级一个包时：
+
+```powershell
+npm version patch --no-git-tag-version -w packages/<包名>
+git add -A
+git commit -m "chore: release <包名> X.Y.Z"
+git push origin main
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+CI 跑完后该包的 npm 版本和 GitHub Release 使用同一个 tag（其它包不动）。
 
 ## 手动重跑
 

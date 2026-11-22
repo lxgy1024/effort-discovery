@@ -1,7 +1,7 @@
 {
   "name": "effort-discovery",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.8",
   "description": "Discover the reasoning effort levels your provider actually accepts, and wire them into OpenCode, Claude Code, Codex, DeepSeek Harness and Antigravity CLI.",
   "type": "module",
   "workspaces": [

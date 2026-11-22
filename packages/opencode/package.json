@@ -1,6 +1,6 @@
 {
   "name": "@tscgoods/opencode-effort-discovery",
-  "version": "0.3.1",
+  "version": "0.4.8",
   "description": "OpenCode plugin: show exactly the reasoning effort levels your provider actually accepts.",
   "type": "module",
   "license": "MIT",
