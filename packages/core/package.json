@@ -11,7 +11,7 @@
     }
   },
   "bin": {
-    "effort-discovery": "./src/cli.js"
+    "effort-discovery": "src/cli.js"
   },
   "files": [
     "src",
