@@ -1,6 +1,6 @@
 {
   "name": "effort-discovery",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Discover which reasoning-effort levels your gateway model accepts, then cap Claude Code's /effort picker to the supported ones.",
   "author": {
     "name": "tscgoods"

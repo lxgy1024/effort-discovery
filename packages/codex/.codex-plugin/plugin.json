@@ -1,6 +1,6 @@
 {
   "name": "effort-discovery",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Probe the gateway for the reasoning-effort levels a model really accepts and generate a Codex model catalog that offers exactly those.",
   "author": {
     "name": "tscgoods"
