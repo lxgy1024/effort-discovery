@@ -63,6 +63,9 @@ Claude Code 的档位枚举固定为 `low / medium / high / xhigh / max`，选�
 | **本插件的注入提示**（默认推荐） | 菜单不变，但每次会话明确告知实测档位与禁用项 | 需要你/模型遵守提示 |
 | `modelPicker[].behavesAs: "claude-opus-4-6"` | 去掉 `xhigh`，剩 `low/medium/high/max` | `medium` 仍在；会连带继承该已知模型的其它能力/默认值 |
 | `CLAUDE_CODE_EFFORT_LEVEL=auto` | 所有请求都不带 `output_config.effort`，绝不会发错值 | 完全失去档位控制 |
+| `CLAUDE_CODE_EXTRA_BODY='{"output_config":{"effort":"low"}}'` | 把 wire 上的 effort 固定成一个值 | 绕过选择器和 `maxEffortLevel`；不能定义集合，只适合网关想完全忽略客户端 effort |
+
+另有完整文件扫描排除的载体：`effort_step_keybinding` 只是在现有前缀里步进、`supportedEffortLevels` 只是上报字段、`CLAUDE_CODE_MODEL_CATALOG` 在第三方/网关场景被强制关闭、`defaultEffortLevel` 只是起点不是锁。
 
 `behavesAs` 示例（只需改你自己的 `~/.claude/settings.json`）：
 
