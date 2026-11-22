@@ -38,7 +38,7 @@ npm 的 trusted publisher 是**按包**配置的，以下每个包都要在 npmj
 CI 只发布 `package.json` 版本**等于 tag 去掉 `v`** 的包；其它包自动跳过。因此各包可以独立演进版本，不要求 lockstep。当前 npm latest：
 
 ```
-core 0.4.0 | opencode 0.3.1 | claude-code 0.4.4 | codex 0.4.7 | dsh 0.3.2 | antigravity 0.4.6
+core 0.4.0 | opencode 0.4.8 | claude-code 0.5.0 | codex 0.5.0 | dsh 0.3.2 | antigravity 0.5.0
 ```
 
 只升级一个包时：
