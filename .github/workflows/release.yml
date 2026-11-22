@@ -78,13 +78,13 @@ jobs:
           for manifest in packages/*/package.json; do
             name="$(node -p "require('./$manifest').name")"
             [ "$(node -p "require('./$manifest').version")" = "$version" ] || continue
-            for attempt in $(seq 1 10); do
-              if npm view "${name}@${version}" version >/dev/null 2>&1; then
-                echo "$name@$version visible"
+            for attempt in $(seq 1 12); do
+              if npm pack "${name}@${version}" --dry-run --silent >/dev/null 2>&1; then
+                echo "$name@$version tarball downloadable"
                 break
               fi
-              echo "$name@$version attempt $attempt: waiting 10s"
-              [ "$attempt" = "10" ] && echo "::warning::${name}@${version} 仍不可见（传播延迟），继续创建 Release"
+              echo "$name@$version attempt $attempt: tarball not ready, waiting 10s"
+              [ "$attempt" = "12" ] && echo "::warning::${name}@${version} tarball 仍不可下载，继续创建 Release"
               sleep 10
             done
           done
