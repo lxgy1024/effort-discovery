@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 import {
+  CLAUDE_LEVELS,
   cachePath,
   claudeGateway,
+  findProbe,
+  loadAliases,
   loadConfig,
   normalizeBaseURL,
   probeAnthropic,
@@ -64,6 +67,7 @@ if (models.length === 0) {
 }
 
 const result = { at: Date.now(), provider: providerID, baseURL, models: {} }
+const aliases = loadAliases()
 for (const model of models) {
   const probed = await probeAnthropic({
     baseURL,
@@ -71,7 +75,17 @@ for (const model of models) {
     model,
     headers: typeof entry?.headers === "object" && entry.headers ? entry.headers : {},
   })
-  result.models[model] = probed
+  const authoritative = findProbe(model, aliases)
+  result.models[model] = {
+    ...probed,
+    alias: aliases[model] ?? null,
+    authoritativeLevels: authoritative?.levels ?? null,
+    authoritativeFrom: authoritative?.from ?? null,
+    unsupportedInClaude:
+      probed.levels?.length > 0
+        ? CLAUDE_LEVELS.filter((level) => !probed.levels.includes(level))
+        : null,
+  }
   await new Promise((resolve) => setTimeout(resolve, 200))
 }
 writeJson(cachePath(), result)

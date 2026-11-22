@@ -29,6 +29,29 @@ Claude Code 2.1.x 里 effort 是 `low / medium / high / xhigh / max`（客户端
 
 没配置也能用：插件会退回读 `~/.claude/settings.json` 的 `env.ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` 和 `modelPicker.options` 里的模型别名。
 
+## 网关别名映射（重要）
+
+Claude 的网关别名（如 `ccs-claude-newapi--deepseek-v4.1-flash-1017[1m]`）通常**不校验** `output_config.effort`——传 `bogus` 也返回 200。这时插件只能诚实报 `no-validation`，不会凭空写档位。
+
+如果你在**另一个 OpenAI 兼容网关**上已经探测到同一模型的真实档位，可以在共享配置里建立别名映射，让会话启动时注入真相：
+
+```jsonc
+// ~/.config/effort-discovery.json
+{
+  "aliases": {
+    "ccs-claude-newapi--deepseek-v4.1-flash-1017[1m]": "deepseek-v4.1-flash-1017"
+  }
+}
+```
+
+插件会读 `~/.cache/effort-discovery/` 下所有缓存（`cache.json` / `dsh.json` / `claude-code.json`），按别名找到实测档位，在 SessionStart 注入：
+
+```
+⚠ 不要选 medium / xhigh：Claude 的选择器仍会显示它们，但网关实测不支持/会忽略。
+```
+
+**注意**：Claude Code 只有 `maxEffortLevel`（上限封顶）一个杠杆，没法隐藏中间档位；这个方案是"注入提醒"，不改选择器。
+
 ## 安装
 
 开发期（就地加载，改完 `/reload-plugins` 生效）：

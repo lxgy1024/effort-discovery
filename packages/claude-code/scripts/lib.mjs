@@ -29,6 +29,57 @@ export function claudeSettingsPath() {
   return join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"), "settings.json")
 }
 
+export const CLAUDE_LEVELS = ["low", "medium", "high", "xhigh", "max"]
+
+/** 网关别名 → 真实模型 id 的映射（在 ~/.config/effort-discovery.json 的 aliases 里） */
+export function loadAliases() {
+  const config = loadConfig()
+  const aliases = config.aliases
+  return aliases && typeof aliases === "object" && !Array.isArray(aliases) ? aliases : {}
+}
+
+/** 在所有缓存里查找某个模型的实测档位；优先有 levels 的证据 */
+export function findProbe(modelID, aliases = {}) {
+  const canonical = aliases[modelID] ?? modelID
+  const dir = cacheDir()
+  const candidates = []
+
+  for (const file of ["cache.json", "dsh.json", "claude-code.json"]) {
+    const json = readJson(join(dir, file))
+    if (!json || typeof json === "object" && (json.owner || json.byProvider)) continue
+    const entries = json.models ?? json
+    if (!entries || typeof entries !== "object") continue
+    for (const [key, value] of Object.entries(entries)) {
+      if (!value || typeof value !== "object" || !("levels" in value)) continue
+      const match =
+        key === modelID ||
+        key === canonical ||
+        key.endsWith(`/${modelID}`) ||
+        key.endsWith(`/${canonical}`)
+      if (match) {
+        candidates.push({
+          from: key,
+          file,
+          source: value.source ?? "unknown",
+          levels: value.levels ?? null,
+          at: value.at ?? 0,
+        })
+      }
+    }
+  }
+
+  candidates.sort(
+    (a, b) => (b.levels?.length ?? 0) - (a.levels?.length ?? 0) || b.at - a.at,
+  )
+  return candidates[0]
+}
+
+/** 给出"实测支持"之外的 Claude 档位（即不该选的） */
+export function unsupportedClaudeLevels(levels) {
+  if (!Array.isArray(levels) || levels.length === 0) return []
+  return CLAUDE_LEVELS.filter((level) => !levels.includes(level))
+}
+
 export function readJson(path) {
   try {
     return JSON.parse(readFileSync(path, "utf8"))
