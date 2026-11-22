@@ -94,8 +94,9 @@ export function normalizeBaseURL(input) {
 }
 
 /**
- * 用 output_config.effort 从高到低试探；2xx 视为该档位可用（并假定更低档位可用）。
- * @returns {Promise<{levels: string[] | null, source: string, at: number}>}
+ * Anthropic Messages 协议档位探测：
+ * 先用非法档位判断网关是否真的校验；不校验就返回 no-validation，
+ * 绝不把“2xx”误当成“支持全部档位”。
  */
 export async function probeAnthropic({ baseURL, apiKey, model, headers = {}, ladder = ANTHROPIC_LADDER, timeoutMs = 30_000 }) {
   const base = normalizeBaseURL(baseURL)
@@ -104,8 +105,7 @@ export async function probeAnthropic({ baseURL, apiKey, model, headers = {}, lad
   let withBeta = true
   let unknown = false
 
-  for (let index = 0; index < ladder.length; index++) {
-    const level = ladder[index]
+  const send = async (level) => {
     const head = {
       "Content-Type": "application/json",
       "anthropic-version": "2023-06-01",
@@ -116,10 +116,8 @@ export async function probeAnthropic({ baseURL, apiKey, model, headers = {}, lad
       head.Authorization = `Bearer ${apiKey}`
       head["x-api-key"] = apiKey
     }
-
-    let response
     try {
-      response = await fetch(url, {
+      const response = await fetch(url, {
         method: "POST",
         headers: head,
         body: JSON.stringify({
@@ -130,32 +128,63 @@ export async function probeAnthropic({ baseURL, apiKey, model, headers = {}, lad
         }),
         signal: AbortSignal.timeout(timeoutMs),
       })
+      return { status: response.status, text: await response.text() }
     } catch {
+      return undefined
+    }
+  }
+
+  const fatal = (r) =>
+    r && [401, 403, 429].includes(r.status)
+      ? { levels: null, source: `http-${r.status}`, at: Date.now() }
+      : undefined
+
+  // 1) sentinel
+  const sentinel = await send("effort-discovery-probe")
+  const fatalSentinel = fatal(sentinel)
+  if (fatalSentinel) return fatalSentinel
+  if (sentinel) {
+    if (sentinel.status >= 200 && sentinel.status < 300) {
+      return { levels: null, source: "no-validation", at: Date.now() }
+    }
+    const listed = parseLevels(sentinel.text)
+    if (listed) return { levels: listed, source: "validated", at: Date.now() }
+    if (
+      sentinel.status === 400 &&
+      /effort-2025-11-24|anthropic-beta/i.test(sentinel.text) &&
+      !/output_config|does not support|unsupported|invalid value/i.test(sentinel.text)
+    ) {
+      withBeta = false
+    }
+  }
+
+  // 2) ladder
+  for (let index = 0; index < ladder.length; index++) {
+    const result = await send(ladder[index])
+    const fatalResult = fatal(result)
+    if (fatalResult) return fatalResult
+    if (!result) {
       unknown = true
       continue
     }
+    if (result.status >= 200 && result.status < 300) {
+      return { levels: ladder.slice(index), source: "validated", at: Date.now() }
+    }
 
-    if (response.ok) return { levels: ladder.slice(index), source: "validated", at: Date.now() }
+    const mentionsBeta = /effort-2025-11-24|anthropic-beta/i.test(result.text)
+    const mentionsEffort = /output_config|does not support|unsupported|invalid value/i.test(result.text)
 
-    const text = await response.text()
-    const mentionsBeta = /effort-2025-11-24|anthropic-beta/i.test(text)
-    const mentionsEffort = /output_config|effort|does not support/i.test(text)
-
-    if (response.status === 400 && mentionsBeta && !mentionsEffort && withBeta) {
+    if (result.status === 400 && mentionsBeta && !mentionsEffort && withBeta) {
       withBeta = false
       index--
       continue
     }
-
-    if (response.status === 400 || response.status === 422) {
+    if (result.status === 400 || result.status === 422) {
+      const listed = parseLevels(result.text)
+      if (listed) return { levels: listed, source: "validated", at: Date.now() }
       if (!mentionsEffort && !mentionsBeta) unknown = true
       continue
     }
-
-    if (response.status === 401 || response.status === 403 || response.status === 429) {
-      return { levels: null, source: `http-${response.status}`, at: Date.now() }
-    }
-
     unknown = true
   }
 

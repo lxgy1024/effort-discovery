@@ -259,9 +259,12 @@ export const ANTHROPIC_EFFORT_BETA = "effort-2025-11-24"
 export const ANTHROPIC_EFFORT_LADDER = ["max", "xhigh", "high", "medium", "low"]
 
 /**
- * Anthropic Messages 协议（Claude Code / agy 走的协议）的档位探测：
- * 用 output_config.effort 逐级试探，遇到 400 说明该级别不被接受。
- * @returns {Promise<{levels: string[] | null, source: string, at: number}>}
+ * Anthropic Messages 协议的档位探测。
+ *
+ * 1) 先发一个明显非法的 effort：若网关仍返回 2xx，说明它根本不校验这个字段，
+ *    结果标记为 no-validation（绝不把 2xx 当成“支持全部档位”）。
+ * 2) 若非法值触发 400 且错误里列出合法值，直接解析出来（最精确）。
+ * 3) 否则用 ladder 逐级试探。
  */
 export async function probeAnthropicEffort(input) {
   const {
@@ -278,8 +281,7 @@ export async function probeAnthropicEffort(input) {
   let withBeta = true
   let unknown = false
 
-  for (let index = 0; index < ladder.length; index++) {
-    const level = ladder[index]
+  const send = async (level) => {
     const headers = {
       "Content-Type": "application/json",
       "anthropic-version": "2023-06-01",
@@ -290,10 +292,8 @@ export async function probeAnthropicEffort(input) {
       headers.Authorization = `Bearer ${apiKey}`
       headers["x-api-key"] = apiKey
     }
-
-    let response
     try {
-      response = await fetch(url, {
+      const response = await fetch(url, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -304,32 +304,67 @@ export async function probeAnthropicEffort(input) {
         }),
         signal: AbortSignal.timeout(timeoutMs),
       })
+      return { status: response.status, text: await response.text() }
     } catch {
+      return undefined
+    }
+  }
+
+  const classified = (result) => {
+    if (!result) return undefined
+    if ([401, 403, 429].includes(result.status)) {
+      return { levels: null, source: `http-${result.status}`, at: Date.now() }
+    }
+    return undefined
+  }
+
+  // 1) sentinel：网关若接受任意值，就是没有校验
+  const sentinel = await send("effort-discovery-probe")
+  const fatal = classified(sentinel)
+  if (fatal) return fatal
+  if (sentinel) {
+    if (sentinel.status >= 200 && sentinel.status < 300) {
+      return { levels: null, source: "no-validation", at: Date.now() }
+    }
+    const fromError = parseLevels(sentinel.text)
+    if (fromError) return { levels: fromError, source: "validated", at: Date.now() }
+    // 只是 beta 头不被接受时，后续去掉它重试
+    if (
+      sentinel.status === 400 &&
+      /effort-2025-11-24|anthropic-beta/i.test(sentinel.text) &&
+      !/output_config|does not support|unsupported|invalid value/i.test(sentinel.text)
+    ) {
+      withBeta = false
+    }
+  }
+
+  // 2) ladder：从高到低逐个试
+  for (let index = 0; index < ladder.length; index++) {
+    const result = await send(ladder[index])
+    const fatal = classified(result)
+    if (fatal) return fatal
+    if (!result) {
       unknown = true
       continue
     }
-
-    if (response.ok) return { levels: ladder.slice(index), source: "validated", at: Date.now() }
-
-    const text = await response.text()
-    const mentionsBeta = /effort-2025-11-24|anthropic-beta/i.test(text)
-    const mentionsEffort = /output_config|effort|does not support/i.test(text)
-
-    if (response.status === 400 && mentionsBeta && !mentionsEffort && withBeta) {
-      withBeta = false
-      index-- // 用同一档位重试，去掉 beta 头
-      continue
+    if (result.status >= 200 && result.status < 300) {
+      return { levels: ladder.slice(index), source: "validated", at: Date.now() }
     }
 
-    if (response.status === 400 || response.status === 422) {
+    const mentionsBeta = /effort-2025-11-24|anthropic-beta/i.test(result.text)
+    const mentionsEffort = /output_config|does not support|unsupported|invalid value/i.test(result.text)
+
+    if (result.status === 400 && mentionsBeta && !mentionsEffort && withBeta) {
+      withBeta = false
+      index--
+      continue
+    }
+    if (result.status === 400 || result.status === 422) {
+      const listed = parseLevels(result.text)
+      if (listed) return { levels: listed, source: "validated", at: Date.now() }
       if (!mentionsEffort && !mentionsBeta) unknown = true
       continue
     }
-
-    if (response.status === 401 || response.status === 403 || response.status === 429) {
-      return { levels: null, source: `http-${response.status}`, at: Date.now() }
-    }
-
     unknown = true
   }
 

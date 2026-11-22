@@ -1,6 +1,6 @@
 {
   "name": "@tscgoods/effort-discovery-core",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Core probe/catalog/cache logic shared by every effort-discovery host plugin.",
   "type": "module",
   "license": "MIT",
