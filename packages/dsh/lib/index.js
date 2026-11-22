@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs"
+import { readFileSync, existsSync, appendFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import z from "@deepseek-ai/schemastery"
@@ -10,16 +10,28 @@ export const Config = z.object({
   mode: z.union([z.const("transform"), z.const("off")]).default("transform"),
   /** 探测缓存有效期（毫秒） */
   ttlMs: z.number().default(6 * 60 * 60 * 1000).volatile(),
+  /** 把每次配置变换的输入/输出写到 ~/.cache/effort-discovery/dsh-transform.log（排障用） */
+  diag: z.boolean().default(false).volatile(),
 })
 
-const TARGET_ADAPTER = "@deepseek-ai/dsh-llm-pi-ai"
+const TARGET_ADAPTER = "dsh-llm-pi-ai"
 const LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"]
 
-function cachePath() {
-  const dir =
+function cacheDir() {
+  return (
     process.env.EFFORT_DISCOVERY_HOME ??
     join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "effort-discovery")
-  return join(dir, "dsh.json")
+  )
+}
+
+function cachePath() {
+  return join(cacheDir(), "dsh.json")
+}
+
+function diag(line) {
+  try {
+    appendFileSync(join(cacheDir(), "dsh-transform.log"), new Date().toISOString() + " " + line + "\n")
+  } catch {}
 }
 
 function readCache() {
@@ -41,8 +53,8 @@ function readCache() {
 export function narrowEfforts(model, levels) {
   if (!Array.isArray(levels) || levels.length === 0) return undefined
   const current = model?.reasoningEfforts
-  if (current === false) return false
-
+  // current === false 往往只是 YAML 里没配/手写了“不推理”，不是上游证据。
+  // 既然探测到了档位，就以探测结果为准重新生成 map。
   const declared = current && typeof current === "object" ? current : {}
   const next = {}
   const accepted = new Set(levels)
@@ -126,12 +138,29 @@ export default {
       "internal/config",
       (fiber, next) => {
         const raw = next()
-        if (fiber?.entry?.options?.name !== TARGET_ADAPTER) return raw
+        const entryName = String(fiber?.entry?.options?.name ?? "")
+        if (!entryName.includes(TARGET_ADAPTER)) return raw
         const cache = readCache()
-        if (!cache) return raw
+        if (!cache) {
+          if (config?.diag) diag(`no cache at ${cachePath()}`)
+          return raw
+        }
         try {
-          return transformProviders(raw, cache)
-        } catch {
+          const next = transformProviders(raw, cache)
+          if (config?.diag) {
+            const before = []
+            for (const profile of Object.values(raw?.providers ?? {})) {
+              for (const model of profile?.models ?? []) before.push(`${model.id}=${JSON.stringify(model.reasoningEfforts)}`)
+            }
+            const after = []
+            for (const profile of Object.values(next?.providers ?? {})) {
+              for (const model of profile?.models ?? []) after.push(`${model.id}=${JSON.stringify(model.reasoningEfforts)}`)
+            }
+            diag(`entry=${entryName}\n  before: ${before.join(" | ")}\n  after:  ${after.join(" | ")}`)
+          }
+          return next
+        } catch (error) {
+          if (config?.diag) diag(`transform failed: ${String(error)}`)
           return raw
         }
       },
