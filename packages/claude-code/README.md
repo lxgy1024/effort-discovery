@@ -52,6 +52,39 @@ Claude 的网关别名（如 `ccs-claude-newapi--deepseek-v4.1-flash-1017[1m]`�
 
 **注意**：Claude Code 只有 `maxEffortLevel`（上限封顶）一个杠杆，没法隐藏中间档位；这个方案是"注入提醒"，不改选择器。
 
+## 档位菜单的硬限制与取舍（v2.1.330）
+
+Claude Code 的档位枚举固定为 `low / medium / high / xhigh / max`，选择器只返回它的**前缀**，再 optionally 用布尔开关删掉 `xhigh` / `max`。**没有配置项能删掉中间的 `medium`**；`*_SUPPORTED_CAPABILITIES` 环境变量在 `ANTHROPIC_BASE_URL` 网关场景下被客户端硬 gate 掉（实测无效）。因此 `{low, high, max}` 这种非连续集合在 Claude Code 里无法表达。
+
+三种可实现的折中：
+
+| 方案 | 效果 | 代价 |
+|---|---|---|
+| **本插件的注入提示**（默认推荐） | 菜单不变，但每次会话明确告知实测档位与禁用项 | 需要你/模型遵守提示 |
+| `modelPicker[].behavesAs: "claude-opus-4-6"` | 去掉 `xhigh`，剩 `low/medium/high/max` | `medium` 仍在；会连带继承该已知模型的其它能力/默认值 |
+| `CLAUDE_CODE_EFFORT_LEVEL=auto` | 所有请求都不带 `output_config.effort`，绝不会发错值 | 完全失去档位控制 |
+
+`behavesAs` 示例（只需改你自己的 `~/.claude/settings.json`）：
+
+```json
+{
+  "modelPicker": {
+    "replaceBuiltInOptions": true,
+    "options": [
+      {
+        "model": "ccs-claude-newapi--deepseek-v4.1-flash-1017[1m]",
+        "label": "deepseek-v4.1-flash-1017",
+        "behavesAs": "claude-opus-4-6"
+      }
+    ]
+  }
+}
+```
+
+等价写法：`"modelOverrides": { "claude-opus-4-6": "ccs-claude-newapi--deepseek-v4.1-flash-1017[1m]" }`，然后用 `--model claude-opus-4-6` 启动。`modelOverrides` / `behavesAs` 确实验证过会导入已知模型的能力表（`xhigh` 会被降级成 `high`），但没有任何已知模型提供 `{low, high, max}`。
+
+> 插件不会自动改 `settings.json` 或加 `behavesAs`——这属于你会话配置的取舍，需要你显式决定。
+
 ## 安装
 
 开发期（就地加载，改完 `/reload-plugins` 生效）：

@@ -1,6 +1,6 @@
 {
   "name": "@tscgoods/claude-code-effort-discovery",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Claude Code plugin: discover which reasoning-effort levels your gateway model accepts, report them, and cap /effort to them.",
   "type": "module",
   "license": "MIT",
