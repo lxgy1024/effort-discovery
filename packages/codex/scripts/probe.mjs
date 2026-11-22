@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {
+  CODEX_EFFORTS,
   cachePath,
   loadConfig,
   nativeCatalog,
@@ -54,19 +55,31 @@ const headers = entry.headers ?? {}
 
 const result = { at: Date.now(), provider: providerID, baseURL, models: {} }
 
-if (!args.noNative) {
-  const native = await nativeCatalog({ baseURL, apiKey, headers })
-  if (native) {
-    for (const [model, levels] of Object.entries(native)) {
-      result.models[model] = { levels, source: "native-catalog", at: Date.now() }
-    }
-  }
-}
+const native = args.noNative ? undefined : await nativeCatalog({ baseURL, apiKey, headers })
+const configured = args.models.length > 0 ? args.models : Array.isArray(entry.models) ? entry.models : []
+const models = [...new Set([...Object.keys(native ?? {}), ...configured])]
 
-const models = args.models.length > 0 ? args.models : Array.isArray(entry.models) ? entry.models : []
 for (const model of models) {
-  if (result.models[model] && !args.force) continue
-  result.models[model] = await probeOpenAI({ baseURL, apiKey, model, headers })
+  const nativeLevels = native?.[model] ?? null
+  const probed = await probeOpenAI({ baseURL, apiKey, model, headers })
+  const validated = probed.source === "validated" && Array.isArray(probed.levels) && probed.levels.length > 0
+
+  // 上游错误回显优先（它反映实际接受的 effort），原生 catalog 兜底
+  const levels = validated
+    ? probed.levels.filter((level) => CODEX_EFFORTS.includes(level))
+    : nativeLevels ?? null
+
+  result.models[model] = {
+    levels,
+    source: validated
+      ? "validated"
+      : nativeLevels
+        ? "native-catalog"
+        : probed.source,
+    rawLevels: probed.levels,
+    nativeLevels,
+    at: Date.now(),
+  }
   await new Promise((resolve) => setTimeout(resolve, 200))
 }
 

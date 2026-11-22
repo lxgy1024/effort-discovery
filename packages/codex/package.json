@@ -1,6 +1,6 @@
 {
   "name": "@tscgoods/codex-effort-discovery",
-  "version": "0.3.1",
+  "version": "0.4.7",
   "description": "Codex CLI plugin: probe which reasoning-effort levels your gateway accepts, then generate a model catalog that makes Codex offer exactly those.",
   "type": "module",
   "license": "MIT",
