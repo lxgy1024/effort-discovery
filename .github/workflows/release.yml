@@ -78,14 +78,14 @@ jobs:
           for manifest in packages/*/package.json; do
             name="$(node -p "require('./$manifest').name")"
             [ "$(node -p "require('./$manifest').version")" = "$version" ] || continue
-            for attempt in $(seq 1 20); do
+            for attempt in $(seq 1 10); do
               if npm view "${name}@${version}" version >/dev/null 2>&1; then
                 echo "$name@$version visible"
                 break
               fi
-              echo "$name@$version attempt $attempt: waiting 15s"
-              [ "$attempt" = "20" ] && echo "::warning::${name}@${version} 仍不可见（传播延迟），继续创建 Release"
-              sleep 15
+              echo "$name@$version attempt $attempt: waiting 10s"
+              [ "$attempt" = "10" ] && echo "::warning::${name}@${version} 仍不可见（传播延迟），继续创建 Release"
+              sleep 10
             done
           done
 
