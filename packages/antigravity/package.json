@@ -1,0 +1,33 @@
+{
+  "name": "@tscgoods/antigravity-effort-discovery",
+  "version": "0.3.0",
+  "description": "Antigravity CLI plugin: probe which reasoning-effort levels your gateway accepts, inject the result into sessions, and optionally generate customModels entries.",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "plugin.json",
+    "hooks.json",
+    "skills",
+    "scripts",
+    "rules",
+    "README.md"
+  ],
+  "keywords": [
+    "antigravity",
+    "antigravity-plugin",
+    "agy",
+    "reasoning-effort"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lxgy1024/effort-discovery.git",
+    "directory": "packages/antigravity"
+  },
+  "homepage": "https://github.com/lxgy1024/effort-discovery#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

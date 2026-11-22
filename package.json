@@ -1,36 +1,18 @@
 {
-  "name": "opencode-effort-discovery",
-  "version": "0.2.2",
-  "description": "OpenCode plugin that detects the reasoning effort levels your provider actually accepts and exposes exactly those.",
+  "name": "effort-discovery",
+  "private": true,
+  "version": "0.3.0",
+  "description": "Discover the reasoning effort levels your provider actually accepts, and wire them into OpenCode, Claude Code, Codex, DeepSeek Harness and Antigravity CLI.",
   "type": "module",
-  "license": "MIT",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "files": [
-    "src",
-    "README.md",
-    "LICENSE"
+  "workspaces": [
+    "packages/*"
   ],
-  "keywords": [
-    "opencode",
-    "opencode-plugin",
-    "reasoning",
-    "effort",
-    "variant"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lxgy1024/opencode-effort-discovery.git"
+  "scripts": {
+    "probe": "node packages/core/src/cli.js probe",
+    "test": "node --test packages/core/test/*.test.js"
   },
-  "homepage": "https://github.com/lxgy1024/opencode-effort-discovery#readme",
-  "bugs": {
-    "url": "https://github.com/lxgy1024/opencode-effort-discovery/issues"
+  "engines": {
+    "node": ">=20"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "dependencies": {
-    "@opencode/plugin": "^2.3.2"
-  }
+  "license": "MIT"
 }

@@ -1,0 +1,15 @@
+{
+  "name": "effort-discovery",
+  "displayName": "Effort Discovery",
+  "version": "0.3.0",
+  "description": "Probe the gateway for the reasoning-effort levels a model really accepts, inject the result into sessions, and optionally generate customModels entries.",
+  "author": "tscgoods",
+  "homepage": "https://github.com/lxgy1024/effort-discovery",
+  "repository": "https://github.com/lxgy1024/effort-discovery",
+  "license": "MIT",
+  "keywords": [
+    "effort",
+    "reasoning",
+    "gateway"
+  ]
+}

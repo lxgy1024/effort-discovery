@@ -1,0 +1,18 @@
+{
+  "effort-discovery": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "node ./scripts/session-note.mjs",
+        "timeout": 20
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "node ./scripts/effort-guard.mjs",
+        "timeout": 20
+      }
+    ]
+  }
+}

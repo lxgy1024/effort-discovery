@@ -1,0 +1,37 @@
+{
+  "name": "@tscgoods/opencode-effort-discovery",
+  "version": "0.3.0",
+  "description": "OpenCode plugin: show exactly the reasoning effort levels your provider actually accepts.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "reasoning",
+    "effort",
+    "variant"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lxgy1024/effort-discovery.git",
+    "directory": "packages/opencode"
+  },
+  "homepage": "https://github.com/lxgy1024/effort-discovery#readme",
+  "bugs": {
+    "url": "https://github.com/lxgy1024/effort-discovery/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@opencode/plugin": "^2.3.2",
+    "@tscgoods/effort-discovery-core": "^0.3.0"
+  }
+}

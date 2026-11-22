@@ -1,0 +1,53 @@
+{
+  "name": "@tscgoods/dsh-effort-discovery",
+  "version": "0.3.0",
+  "description": "DeepSeek Harness (dsh) bundle: probe the gateway for the reasoning-effort levels each model accepts and narrow llm-pi-ai reasoningEfforts to them.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "scripts",
+    "cordis.patch.yml",
+    "locale",
+    "README.md"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis-plugin",
+    "reasoning-effort"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lxgy1024/effort-discovery.git",
+    "directory": "packages/dsh"
+  },
+  "homepage": "https://github.com/lxgy1024/effort-discovery#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "dsh": ">=0.2.2-rc.1 <0.3.0",
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.19.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/dsh-llm": ">=0.2.2-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-tools": ">=0.2.2-rc.1 <0.3.0"
+  }
+}

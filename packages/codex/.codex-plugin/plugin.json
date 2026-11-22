@@ -1,0 +1,30 @@
+{
+  "name": "effort-discovery",
+  "version": "0.3.0",
+  "description": "Probe the gateway for the reasoning-effort levels a model really accepts and generate a Codex model catalog that offers exactly those.",
+  "author": {
+    "name": "tscgoods"
+  },
+  "homepage": "https://github.com/lxgy1024/effort-discovery",
+  "repository": "https://github.com/lxgy1024/effort-discovery",
+  "license": "MIT",
+  "keywords": [
+    "effort",
+    "reasoning",
+    "gateway",
+    "model-catalog"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Effort Discovery",
+    "shortDescription": "Probe + sync reasoning effort levels into a Codex model catalog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Probe my gateway for the effort levels each model accepts"
+    ]
+  }
+}

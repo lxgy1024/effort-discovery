@@ -1,0 +1,39 @@
+{
+  "name": "@tscgoods/effort-discovery-core",
+  "version": "0.3.0",
+  "description": "Core probe/catalog/cache logic shared by every effort-discovery host plugin.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "bin": {
+    "effort-discovery": "./src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "reasoning-effort",
+    "opencode",
+    "claude-code",
+    "codex",
+    "deepseek-harness",
+    "antigravity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lxgy1024/effort-discovery.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

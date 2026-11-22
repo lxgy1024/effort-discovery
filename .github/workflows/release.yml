@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "要发布的 tag（例如 v0.2.0）"
+        description: "要发布的 tag（例如 v0.3.0）"
         required: true
 
 permissions:
@@ -45,46 +45,49 @@ jobs:
           echo "name=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify package.json version matches tag
-        run: |
-          PKG="$(node -p "require('./package.json').version")"
-          TAG="${{ steps.tag.outputs.version }}"
-          if [ "$PKG" != "$TAG" ]; then
-            echo "::error::package.json 版本 ($PKG) 与 tag ($TAG) 不一致"
-            exit 1
-          fi
-          echo "version ok: $PKG"
+      - name: Install workspace dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
 
-      - name: Check if version already exists on npm
-        id: exists
-        run: |
-          if npm view "opencode-effort-discovery@${{ steps.tag.outputs.version }}" version >/dev/null 2>&1; then
-            echo "published=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::${{ steps.tag.outputs.version }} 已在 npm 上，跳过发布，只创建 Release"
-          else
-            echo "published=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Publish to npm
+      - name: Publish packages at tag version
         id: publish
-        if: steps.exists.outputs.published != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public
+        run: |
+          set -e
+          version="${{ steps.tag.outputs.version }}"
+          published=0
+          for manifest in packages/*/package.json; do
+            dir="$(dirname "$manifest")"
+            name="$(node -p "require('./$manifest').name")"
+            pkgver="$(node -p "require('./$manifest').version")"
+            [ "$pkgver" = "$version" ] || { echo "skip $name (version $pkgver != $version)"; continue; }
+            if npm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "$name@$version 已存在，跳过"
+              continue
+            fi
+            echo "publishing $name@$version"
+            (cd "$dir" && npm publish --provenance --access public)
+            published=$((published + 1))
+          done
+          echo "published=${published}" >> "$GITHUB_OUTPUT"
 
-      - name: Check published version
+      - name: Wait for registry visibility
         continue-on-error: true
         run: |
           version="${{ steps.tag.outputs.version }}"
-          for attempt in $(seq 1 20); do
-            if npm view "opencode-effort-discovery@${version}" version >/dev/null 2>&1; then
-              echo "registry ok: ${version}"
-              exit 0
-            fi
-            echo "attempt ${attempt}: not visible yet, waiting 15s"
-            sleep 15
+          for manifest in packages/*/package.json; do
+            name="$(node -p "require('./$manifest').name")"
+            [ "$(node -p "require('./$manifest').version")" = "$version" ] || continue
+            for attempt in $(seq 1 20); do
+              if npm view "${name}@${version}" version >/dev/null 2>&1; then
+                echo "$name@$version visible"
+                break
+              fi
+              echo "$name@$version attempt $attempt: waiting 15s"
+              [ "$attempt" = "20" ] && echo "::warning::${name}@${version} 仍不可见（传播延迟），继续创建 Release"
+              sleep 15
+            done
           done
-          echo "::warning::${version} 在 npm 上仍不可见（registry 传播延迟），但 publish 步骤已成功，继续创建 Release"
 
       - name: Create GitHub Release
         env:

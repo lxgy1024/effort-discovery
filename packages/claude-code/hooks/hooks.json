@@ -1,0 +1,32 @@
+{
+  "description": "把网关实测的 effort 档位告诉 Claude（只读缓存，不联网、不改配置）",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/session-report.mjs"],
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostModelSwitch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/session-report.mjs"],
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

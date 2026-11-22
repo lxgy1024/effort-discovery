@@ -1,0 +1,6 @@
+- insert:
+    - id: effort-discovery
+      name: "@tscgoods/dsh-effort-discovery"
+      config:
+        mode: transform
+        ttlMs: 21600000

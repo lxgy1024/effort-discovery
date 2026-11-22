@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Effort Discovery",
+    "description": "探测网关真正支持的 reasoning effort 档位，并收窄模型选择器里的档位菜单"
+  }
+}
