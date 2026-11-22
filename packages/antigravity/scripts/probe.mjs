@@ -87,13 +87,18 @@ for (const model of models) {
     headers: entry.headers ?? {},
   })
   const agy = args.agy ? agyAvailable(model) : undefined
+
+  // 网关不校验时，agy 自己的模型元数据是唯一可信来源
+  const gatewayLevels = Array.isArray(probed.levels) && probed.levels.length > 0 ? probed.levels : null
+  const authority = gatewayLevels ? "gateway" : Array.isArray(agy) && agy.length > 0 ? "agy" : null
+  const base = gatewayLevels ?? (Array.isArray(agy) && agy.length > 0 ? agy : null)
+
   result.models[model] = {
     ...probed,
     agyAvailable: agy ?? null,
-    /// 只保留 agy 自己的枚举里存在的档位
-    effective: Array.isArray(probed.levels)
-      ? probed.levels.filter((level) => AGY_LEVELS.includes(level))
-      : null,
+    authority,
+    /// 实际可用档位：网关证据优先，否则用 agy 自身元数据兜底
+    effective: base ? base.filter((level) => AGY_LEVELS.includes(level)) : null,
   }
   await new Promise((resolve) => setTimeout(resolve, 200))
 }
