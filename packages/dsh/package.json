@@ -1,6 +1,6 @@
 {
   "name": "@tscgoods/dsh-effort-discovery",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DeepSeek Harness (dsh) bundle: probe the gateway for the reasoning-effort levels each model accepts and narrow llm-pi-ai reasoningEfforts to them.",
   "type": "module",
   "main": "lib/index.js",
