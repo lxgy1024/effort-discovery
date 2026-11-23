@@ -93,6 +93,10 @@ node packages/core/src/cli.js probe --provider <id> --json
 
 见 [RELEASING.md](./RELEASING.md)：推 `vX.Y.Z` tag，CI 发布同版本的所有包并创建 GitHub Release。npm 包都发布在 `@tscgoods` scope。
 
+## 友链
+
+- [Linux.do](https://linux.do)
+
 ## 许可
 
 MIT
