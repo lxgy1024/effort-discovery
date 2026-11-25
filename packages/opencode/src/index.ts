@@ -392,13 +392,28 @@ export default Plugin.define({
             log("skip", provider.id, "no baseURL")
             continue
           }
+          // 官方 zen 端点的模型在 models.dev 里有目录元数据，且端点对探测一律 400/429，不打扰
+          try {
+            const host = new URL(baseURL).hostname
+            if (host === "opencode.ai" || host.endsWith(".opencode.ai")) {
+              log("skip", provider.id, "zen endpoint uses catalog metadata")
+              continue
+            }
+          } catch {
+            // 非法 URL 照常尝试
+          }
 
           for (const model of models.filter((item) => item.providerID === provider.id)) {
             const modelID = String((model as { modelID?: string }).modelID ?? model.id)
             const id = cacheKey(provider.id, modelID)
             const previous = probes.get(id)
+            // error/429/5xx 视为可重试；http-400/404 等确定性答复在 TTL 内缓存，避免探测风暴
+            const retryable =
+              previous?.source === "error" ||
+              previous?.source === "http-429" ||
+              (previous?.source.startsWith("http-5") ?? false)
             const stale =
-              !previous || previous.source.startsWith("http-") || Date.now() - previous.at >= ttlMs
+              !previous || retryable || Date.now() - previous.at >= ttlMs
             if (!stale) continue
 
             const result = await probeEffort({ baseURL, apiKey, modelID, headers })
@@ -426,18 +441,15 @@ export default Plugin.define({
         return { changed, limited }
       }
 
-      // 遇到限流就退避重试，直到探测稳定或放弃
-      let changed = false
+      // 遇到限流就退避重试，直到探测稳定或放弃；每轮结束立刻 reload，不等全部轮次
       for (let round = 0; round < 5; round++) {
         const result = await runProbes()
-        if (result.changed) changed = true
+        if (result.changed || (round === 0 && probes.size > 0)) await ctx.model.reload()
         if (!result.limited) break
         const waitMs = 60_000 * (round + 1)
         log("backing off", waitMs)
         await sleep(waitMs)
       }
-
-      if (changed || probes.size > 0) await ctx.model.reload()
     }
 
     void bootstrap().catch((error) => log("bootstrap failed", error))
