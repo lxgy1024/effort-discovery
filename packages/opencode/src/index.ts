@@ -1,5 +1,8 @@
 import { Plugin } from "@opencode/plugin"
 import { execSync } from "node:child_process"
+import { appendFileSync, mkdirSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 
 /**
  * effort-discovery
@@ -223,8 +226,25 @@ export default Plugin.define({
       ? (options.overrides as Record<string, Record<string, string[]>>)
       : {}
     const debug = options.debug === true
+    // server 不捕获插件 stdout；debug 时同时写文件，保证可观测
+    const debugFile = join(tmpdir(), "effort-discovery-opencode.log")
     const log = (...args: unknown[]) => {
-      if (debug) console.log("[effort-discovery]", ...args)
+      if (!debug) return
+      const line = `[effort-discovery] ${args
+        .map((item) => {
+          if (typeof item === "string") return item
+          try {
+            return JSON.stringify(item)
+          } catch {
+            return String(item)
+          }
+        })
+        .join(" ")}`
+      try {
+        appendFileSync(debugFile, `${new Date().toISOString()} ${line}\n`)
+      } catch {
+        mkdirSync(tmpdir(), { recursive: true })
+      }
     }
 
     const probes = new Map<string, ProbeResult>()
@@ -266,12 +286,15 @@ export default Plugin.define({
       for (const model of editor.list()) {
         const providerID = String(model.providerID)
         if (!providerIDs.has(providerID)) continue
-        const modelID = String(model.modelID ?? model.id)
+        const modelID = String((model as { modelID?: string }).modelID ?? model.id)
         const levels = resolveLevels(providerID, modelID)
         if (!levels) continue
         const current = (model.variants ?? []).map((variant) => variant.id).join(",")
         if (current === levels.join(",")) continue
-        model.variants = toVariants(levels) as typeof model.variants
+        log("transform", providerID, modelID, current || "<empty>", "->", levels.join(","))
+        editor.update(providerID, model.id, (draft) => {
+          draft.variants = toVariants(levels) as typeof draft.variants
+        })
       }
     })
 
@@ -342,6 +365,14 @@ export default Plugin.define({
         log("no target providers")
         return
       }
+      log(
+        "targets",
+        providers.map((item) => item.id).join(","),
+        "models",
+        models
+          .map((item) => `${item.providerID}/${String((item as { modelID?: string }).modelID ?? item.id)}`)
+          .join(","),
+      )
 
       const runProbes = async () => {
         let changed = false
@@ -363,16 +394,17 @@ export default Plugin.define({
           }
 
           for (const model of models.filter((item) => item.providerID === provider.id)) {
-            const id = cacheKey(provider.id, model.modelID)
+            const modelID = String((model as { modelID?: string }).modelID ?? model.id)
+            const id = cacheKey(provider.id, modelID)
             const previous = probes.get(id)
             const stale =
               !previous || previous.source.startsWith("http-") || Date.now() - previous.at >= ttlMs
             if (!stale) continue
 
-            const result = await probeEffort({ baseURL, apiKey, modelID: model.modelID, headers })
+            const result = await probeEffort({ baseURL, apiKey, modelID, headers })
 
             if (result.source === "error") {
-              log("probe failed", provider.id, model.modelID)
+              log("probe failed", provider.id, modelID)
               continue
             }
             // 限流/服务端错误：保留旧结论，下一轮再试
@@ -386,8 +418,8 @@ export default Plugin.define({
             const after = result.levels?.join(",") ?? "<none>"
             if (before !== after) changed = true
             probes.set(id, result)
-            await ctx.storage.set(storageKey(provider.id, model.modelID), { ...result })
-            log(provider.id, model.modelID, before, "->", after, result.source)
+            await ctx.storage.set(storageKey(provider.id, modelID), { ...result })
+            log(provider.id, modelID, before, "->", after, result.source)
             await sleep(PROBE_GAP_MS)
           }
         }
