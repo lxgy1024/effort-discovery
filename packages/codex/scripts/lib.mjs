@@ -143,6 +143,60 @@ export async function nativeCatalog({ baseURL, apiKey, headers = {}, timeoutMs =
   }
 }
 
+/**
+ * 把探测缓存里的正确档位修补进 catalog（就地修改传入对象）。
+ * cacheModels 的键可能是带 provider 前缀的 slug（ccs-newapi/xxx），也可能是裸模型 id；
+ * catalog slug 先精确匹配，再按 "/" 后缀退化匹配。
+ * 返回变更列表。
+ */
+export function patchCatalog(catalog, cacheModels) {
+  const changes = []
+  if (!catalog?.models || !cacheModels) return changes
+
+  const lookup = (slug) => {
+    const exact = cacheModels[slug]
+    if (exact) return exact
+    const bare = String(slug).split("/").pop()
+    // 裸 id 匹配：缓存键自身是裸 id，或者缓存键的后缀等于裸 id
+    const candidates = Object.entries(cacheModels).filter(([key]) => {
+      const tail = key.split("/").pop()
+      return key === bare || tail === bare
+    })
+    return candidates.length === 1 ? candidates[0][1] : undefined
+  }
+
+  for (const model of catalog.models) {
+    const info = lookup(model.slug)
+    if (!info?.levels?.length) continue
+    const desired = info.levels.filter((level) => level !== "off")
+    const before = (model.supported_reasoning_levels ?? []).map((item) =>
+      typeof item === "string" ? item : item.effort,
+    )
+    if (before.join(",") === desired.join(",")) continue
+    model.supported_reasoning_levels = desired.map((effort) => ({ effort, description: effort }))
+    if (!desired.includes(model.default_reasoning_level)) {
+      model.default_reasoning_level = desired.includes("medium") ? "medium" : desired[0]
+    }
+    changes.push({
+      model: model.slug,
+      before: before.join(",") || "(none)",
+      after: desired.join(","),
+    })
+  }
+  return changes
+}
+
+/** config.toml 当前指向的 catalog 文件路径（没有则为 undefined） */
+export function configCatalogTarget() {
+  try {
+    const config = readFileSync(join(codexHome(), "config.toml"), "utf8")
+    const match = /^\s*model_catalog_json\s*=\s*['"](.+?)['"]/m.exec(config)
+    return match ? match[1].replace(/\\\\/g, "\\") : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** 读取当前生效的 catalog（codex debug models 优先，其次 config.toml 的 model_catalog_json） */
 export function currentCatalog() {
   const config = readFileSync(join(codexHome(), "config.toml"), "utf8")

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { catalogPath, cachePath, currentCatalog, readJson, writeJson } from "./lib.mjs"
+import { catalogPath, cachePath, currentCatalog, patchCatalog, readJson, writeJson } from "./lib.mjs"
 
 function parse(argv) {
   const args = {}
@@ -42,22 +42,7 @@ if (!current) {
 }
 
 const catalog = structuredClone(current.catalog)
-const changes = []
-
-for (const model of catalog.models ?? []) {
-  const info = cache.models[model.slug]
-  if (!info?.levels?.length) continue
-  const desired = info.levels.filter((level) => level !== "off")
-  const before = (model.supported_reasoning_levels ?? []).map((item) =>
-    typeof item === "string" ? item : item.effort,
-  )
-  if (before.join(",") === desired.join(",")) continue
-  model.supported_reasoning_levels = desired.map((effort) => ({ effort, description: effort }))
-  if (!desired.includes(model.default_reasoning_level)) {
-    model.default_reasoning_level = desired.includes("medium") ? "medium" : desired[0]
-  }
-  changes.push({ model: model.slug, before: before.join(",") || "(none)", after: desired.join(",") })
-}
+const changes = patchCatalog(catalog, cache.models)
 
 if (args.json) process.stdout.write(JSON.stringify(changes, null, 2) + "\n")
 else if (changes.length === 0) process.stdout.write("no changes\n")

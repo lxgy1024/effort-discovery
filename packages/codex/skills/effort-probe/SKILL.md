@@ -15,19 +15,28 @@ Codex 的档位列表来自 **model catalog**（`model_catalog_json`），插件
 node "${PLUGIN_ROOT}/scripts/probe.mjs" --json
 ```
 
-2. 把结果同步进 catalog 副本（默认 dry-run）：
+2. 就地修补 catalog（默认 dry-run）。guard 会修「config 当前指向的文件」+ efforts.json，
+   不论指针指向哪，文件内容都是对的——能抵抗 cc-switch 重新生成 catalog 造成的覆盖：
 
 ```bash
-node "${PLUGIN_ROOT}/scripts/sync-catalog.mjs"
+node "${PLUGIN_ROOT}/scripts/guard.mjs"
 ```
 
 3. 用户确认后再写：
 
 ```bash
-node "${PLUGIN_ROOT}/scripts/sync-catalog.mjs" --write
+node "${PLUGIN_ROOT}/scripts/guard.mjs" --write
 ```
 
-4. 提醒用户在 `~/.codex/config.toml` 设置：
+4. 如果用户希望长期自动防覆盖，可建议前台常驻：
+
+```bash
+node "${PLUGIN_ROOT}/scripts/guard.mjs" --watch
+```
+
+（纯前台进程，不注册计划任务/服务。）
+
+5. 如果 config.toml 的 model_catalog_json 尚未设置过，提醒用户设置：
 
 ```toml
 model_catalog_json = 'C:\Users\<you>\.codex\model-catalogs\efforts.json'

@@ -36,6 +36,32 @@ node scripts/sync-catalog.mjs --write
 
 插件还提供 `/efforts` 命令和 `effort-probe` 技能，让 agent 代跑这两步。
 
+## 防覆盖：guard.mjs
+
+cc-switch 之类的工具会**重新生成自己的 catalog 文件并把 config.toml 的指针改回去**，
+导致修好的档位被覆盖。`guard.mjs` 的思路是不跟它抢指针——不论 config 指向哪份文件，
+直接**就地**把实测档位修补进那份文件本身（cc-switch 的文件也修），指针改不改都无所谓：
+
+```powershell
+# 查看会修什么（dry-run）
+node scripts/guard.mjs
+
+# 修补一次
+node scripts/guard.mjs --write
+
+# 常驻前台，catalog 被重写就自动再修（不注册计划任务/服务，Ctrl+C 停止）
+node scripts/guard.mjs --watch
+```
+
+日常使用建议：探测+修复一次到位——
+
+```powershell
+node scripts/probe.mjs; node scripts/guard.mjs --write
+```
+
+`sync-catalog.mjs` 仍然保留（生成独立的 efforts.json 副本），guard 修的文件集合是
+「config 当前指向的文件」+「efforts.json」的并集。
+
 ## 哪个证据可信
 
 DeepSeek 官方文档（https://api-docs.deepseek.com/zh-cn/guides/thinking_mode）明确写着 `reasoning_effort` 只接受 `low / high / max`，`medium` 和 `xhigh` 都会被映射成 `high`；Anthropic 格式是 `none/low/high/max`。
